@@ -73,7 +73,13 @@ REGISTERS = {
     # Control Registers (Read/Write)
     "eps_output": {"address": 46613, "count": 1, "type": "u16", "scale": 1, "rw": True},
     "export_power_limit": {"address": 46616, "count": 2, "type": "i32", "scale": 1, "unit": "W", "rw": True},
+    "import_power_limit": {"address": 46501, "count": 2, "type": "i32", "scale": 1, "unit": "W", "rw": True},
+    "export_peak_limit": {"address": 46504, "count": 2, "type": "i32", "scale": 1, "unit": "W", "rw": True},
+    "minimum_soc": {"address": 46609, "count": 1, "type": "u16", "scale": 1, "unit": "%", "rw": True},
+    "maximum_soc": {"address": 46610, "count": 1, "type": "u16", "scale": 1, "unit": "%", "rw": True},
+    "minimum_soc_ongrid": {"address": 46611, "count": 1, "type": "u16", "scale": 1, "unit": "%", "rw": True},
     "work_mode": {"address": 49203, "count": 1, "type": "u16", "scale": 1, "rw": True},
+    "network_status": {"address": 49240, "count": 1, "type": "u16", "scale": 1},
 }
 
 # Sensor definitions for Home Assistant
@@ -250,9 +256,48 @@ SENSOR_DEFINITIONS = {
         "unit": "W",
         "icon": "mdi:transmission-tower-export",
     },
+    "import_power_limit": {
+        "name": "Import Power Limit",
+        "device_class": "power",
+        "state_class": "measurement",
+        "unit": "W",
+        "icon": "mdi:transmission-tower-import",
+    },
+    "export_peak_limit": {
+        "name": "Export Peak Limit",
+        "device_class": "power",
+        "state_class": "measurement",
+        "unit": "W",
+        "icon": "mdi:transmission-tower-export",
+    },
+    "minimum_soc": {
+        "name": "Minimum State of Charge",
+        "device_class": "battery",
+        "state_class": "measurement",
+        "unit": "%",
+        "icon": "mdi:battery-low",
+    },
+    "maximum_soc": {
+        "name": "Maximum State of Charge",
+        "device_class": "battery",
+        "state_class": "measurement",
+        "unit": "%",
+        "icon": "mdi:battery-high",
+    },
+    "minimum_soc_ongrid": {
+        "name": "Minimum SoC OnGrid",
+        "device_class": "battery",
+        "state_class": "measurement",
+        "unit": "%",
+        "icon": "mdi:battery-low",
+    },
     "work_mode": {
         "name": "Work Mode",
         "icon": "mdi:cog",
+    },
+    "network_status": {
+        "name": "Network Status",
+        "icon": "mdi:network",
     },
 }
 
@@ -292,5 +337,52 @@ NUMBER_DEFINITIONS = {
         "unit": "W",
         "device_class": "power",
         "mode": "box",
+    },
+    "import_power_limit": {
+        "name": "Import Power Limit Control",
+        "icon": "mdi:transmission-tower-import",
+        "min": 0,
+        "max": 100000,  # 100kW max
+        "step": 100,
+        "unit": "W",
+        "device_class": "power",
+        "mode": "box",
+    },
+    "export_peak_limit": {
+        "name": "Export Peak Limit Control",
+        "icon": "mdi:transmission-tower-export",
+        "min": 0,
+        "max": 100000,  # 100kW max
+        "step": 100,
+        "unit": "W",
+        "device_class": "power",
+        "mode": "box",
+    },
+    "minimum_soc": {
+        "name": "Minimum SoC Control",
+        "icon": "mdi:battery-low",
+        "min": 0,
+        "max": 100,
+        "step": 1,
+        "unit": "%",
+        "mode": "slider",
+    },
+    "maximum_soc": {
+        "name": "Maximum SoC Control",
+        "icon": "mdi:battery-high",
+        "min": 0,
+        "max": 100,
+        "step": 1,
+        "unit": "%",
+        "mode": "slider",
+    },
+    "minimum_soc_ongrid": {
+        "name": "Minimum SoC OnGrid Control",
+        "icon": "mdi:battery-low",
+        "min": 0,
+        "max": 100,
+        "step": 1,
+        "unit": "%",
+        "mode": "slider",
     },
 }
