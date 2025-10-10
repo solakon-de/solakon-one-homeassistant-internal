@@ -25,12 +25,12 @@ async def async_setup_entry(
     coordinator = hass.data[DOMAIN][config_entry.entry_id]["coordinator"]
     hub = hass.data[DOMAIN][config_entry.entry_id]["hub"]
 
-    # Get device info for all numbers
+    # Get device info
     device_info = await hub.async_get_device_info()
 
     entities = []
     for key, definition in NUMBER_DEFINITIONS.items():
-        # Only create number entities for registers that have rw flag
+        # Only create number entities for registers that exist and have rw flag
         if key in REGISTERS and REGISTERS[key].get("rw", False):
             entities.append(
                 SolakonNumber(
@@ -43,7 +43,8 @@ async def async_setup_entry(
                 )
             )
 
-    async_add_entities(entities, True)
+    if entities:
+        async_add_entities(entities, True)
 
 
 class SolakonNumber(CoordinatorEntity, NumberEntity):
@@ -77,7 +78,7 @@ class SolakonNumber(CoordinatorEntity, NumberEntity):
 
         # Set number attributes
         self._attr_native_min_value = definition.get("min", 0)
-        self._attr_native_max_value = definition.get("max", 100)
+        self._attr_native_max_value = definition.get("max", 100000)
         self._attr_native_step = definition.get("step", 1)
 
         # Set device class and unit
@@ -105,7 +106,7 @@ class SolakonNumber(CoordinatorEntity, NumberEntity):
             manufacturer=self._device_info.get("manufacturer", "Solakon"),
             model=self._device_info.get("model", "One"),
             sw_version=self._device_info.get("version"),
-            serial_number=self._device_info.get("serial"),
+            serial_number=self._device_info.get("serial_number"),
         )
 
     @callback
@@ -114,14 +115,17 @@ class SolakonNumber(CoordinatorEntity, NumberEntity):
         if self.coordinator.data and self._number_key in self.coordinator.data:
             value = self.coordinator.data[self._number_key]
 
-            # Apply scaling if defined
-            scale = self._register_config.get("scale", 1)
-            if scale != 1:
-                # When reading, we divide by scale in modbus.py
-                # So the value is already scaled properly
-                self._attr_native_value = value
+            # Value is already processed by modbus.py (scaled and converted)
+            if isinstance(value, (int, float)):
+                self._attr_native_value = float(value)
+                _LOGGER.debug(
+                    f"{self._number_key}: Read value = {self._attr_native_value}"
+                )
             else:
-                self._attr_native_value = value
+                _LOGGER.warning(
+                    f"Invalid value type for {self._number_key}: {type(value)}"
+                )
+                self._attr_native_value = None
         else:
             self._attr_native_value = None
 
@@ -129,34 +133,65 @@ class SolakonNumber(CoordinatorEntity, NumberEntity):
 
     async def async_set_native_value(self, value: float) -> None:
         """Update the current value."""
-        # Convert float to int for register writing
+        # Convert to int for Modbus register writing
         int_value = int(value)
 
-        # Apply scaling if needed (reverse of read scaling)
+        # Get register info
+        address = self._register_config["address"]
+        count = self._register_config.get("count", 1)
+        data_type = self._register_config.get("type", "u16")
         scale = self._register_config.get("scale", 1)
+
+        # Apply scaling for write (reverse of read scaling)
+        # If scale=1 (which is the case for all our RW registers), this does nothing
         if scale != 1:
             int_value = int(value * scale)
 
-        address = self._register_config["address"]
-        count = self._register_config.get("count", 1)
+        _LOGGER.info(
+            f"Setting {self._number_key} at address {address} to {value} "
+            f"(raw value: {int_value}, type: {data_type}, count: {count})"
+        )
 
-        _LOGGER.info(f"Setting {self._number_key} to {value} (scaled value: {int_value})")
-
-        # Write the value to the register(s)
+        # Write based on register count
         if count == 1:
-            # Single register write
+            # Single register write (16-bit)
+            # Ensure value fits in uint16 range
+            if int_value < 0:
+                int_value = 0
+            elif int_value > 0xFFFF:
+                int_value = 0xFFFF
+
             success = await self._hub.async_write_register(address, int_value)
         else:
-            # Multi-register write for 32-bit values
-            # Split into high and low words
+            # Multi-register write (32-bit)
+            # Handle signed/unsigned conversion
+            if "i32" in data_type.lower() and int_value < 0:
+                # Convert negative to two's complement for I32
+                int_value = int_value + 0x100000000
+
+            # Ensure value fits in uint32 range
+            if int_value < 0:
+                int_value = 0
+            elif int_value > 0xFFFFFFFF:
+                int_value = 0xFFFFFFFF
+
+            # Split into high and low words (big-endian: high word first)
             high_word = (int_value >> 16) & 0xFFFF
             low_word = int_value & 0xFFFF
             values = [high_word, low_word]
+
+            _LOGGER.debug(
+                f"Writing 32-bit value: {int_value:#x} = [{high_word:#x}, {low_word:#x}]"
+            )
+
             success = await self._hub.async_write_registers(address, values)
 
         if success:
             _LOGGER.info(f"Successfully set {self._number_key} to {value}")
-            # Request coordinator to refresh data
+            # Update the state immediately (optimistic update)
+            self._attr_native_value = float(value)
+            self.async_write_ha_state()
+            # Request coordinator to refresh data to confirm the change
             await self.coordinator.async_request_refresh()
         else:
             _LOGGER.error(f"Failed to set {self._number_key} to {value}")
@@ -164,4 +199,5 @@ class SolakonNumber(CoordinatorEntity, NumberEntity):
     @property
     def available(self) -> bool:
         """Return if entity is available."""
-        return self.coordinator.last_update_success and self._attr_native_value is not None
+        # Entity is available if coordinator succeeded
+        return self.coordinator.last_update_success

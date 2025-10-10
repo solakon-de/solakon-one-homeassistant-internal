@@ -67,13 +67,13 @@ REGISTERS = {
     "battery1_power": {"address": 39230, "count": 2, "type": "i32", "scale": 1, "unit": "W"},
     "battery_combined_power": {"address": 39237, "count": 2, "type": "i32", "scale": 1, "unit": "W"},
 
-    # BMS1 Information
+    # BMS Information (Read-Only)
     "bms1_soc": {"address": 37612, "count": 1, "type": "u16", "scale": 1, "unit": "%"},
 
     # Control Registers (Read/Write)
-    "eps_output": {"address": 46613, "count": 1, "type": "u16", "rw": True},
+    "eps_output": {"address": 46613, "count": 1, "type": "u16", "scale": 1, "rw": True},
     "export_power_limit": {"address": 46616, "count": 2, "type": "i32", "scale": 1, "unit": "W", "rw": True},
-    "work_mode": {"address": 49203, "count": 1, "type": "u16", "rw": True},
+    "work_mode": {"address": 49203, "count": 1, "type": "u16", "scale": 1, "rw": True},
 }
 
 # Sensor definitions for Home Assistant
@@ -228,19 +228,38 @@ SENSOR_DEFINITIONS = {
         "unit": "Hz",
         "icon": "mdi:sine-wave",
     },
+
+    # Battery Management System
     "bms1_soc": {
-        "name": "Battery SoC",
+        "name": "Battery State of Charge",
         "device_class": "battery",
         "state_class": "measurement",
         "unit": "%",
         "icon": "mdi:battery",
+    },
+
+    # Control Status Sensors (showing current values of controllable parameters)
+    "eps_output": {
+        "name": "EPS Output Mode",
+        "icon": "mdi:power-standby",
+    },
+    "export_power_limit": {
+        "name": "Export Power Limit",
+        "device_class": "power",
+        "state_class": "measurement",
+        "unit": "W",
+        "icon": "mdi:transmission-tower-export",
+    },
+    "work_mode": {
+        "name": "Work Mode",
+        "icon": "mdi:cog",
     },
 }
 
 # Select entity definitions for Home Assistant
 SELECT_DEFINITIONS = {
     "eps_output": {
-        "name": "EPS Output",
+        "name": "EPS Output Control",
         "icon": "mdi:power-standby",
         "options": {
             0: "Disable",
@@ -249,7 +268,7 @@ SELECT_DEFINITIONS = {
         },
     },
     "work_mode": {
-        "name": "Work Mode",
+        "name": "Work Mode Control",
         "icon": "mdi:cog",
         "options": {
             1: "Self Use",
@@ -265,10 +284,10 @@ SELECT_DEFINITIONS = {
 # Number entity definitions for Home Assistant
 NUMBER_DEFINITIONS = {
     "export_power_limit": {
-        "name": "Export Power Limit",
-        "icon": "mdi:transmission-tower",
+        "name": "Export Power Limit Control",
+        "icon": "mdi:transmission-tower-export",
         "min": 0,
-        "max": 100000,  # 100kW max (actual max depends on inverter model)
+        "max": 100000,  # 100kW max, will be adjusted based on inverter Pmax
         "step": 100,
         "unit": "W",
         "device_class": "power",
