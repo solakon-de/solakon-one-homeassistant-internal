@@ -66,6 +66,14 @@ REGISTERS = {
     "battery1_current": {"address": 39228, "count": 2, "type": "i32", "scale": 1000, "unit": "A"},
     "battery1_power": {"address": 39230, "count": 2, "type": "i32", "scale": 1, "unit": "W"},
     "battery_combined_power": {"address": 39237, "count": 2, "type": "i32", "scale": 1, "unit": "W"},
+
+    # BMS1 Information
+    "bms1_soc": {"address": 37612, "count": 1, "type": "u16", "scale": 1, "unit": "%"},
+
+    # Control Registers (Read/Write)
+    "eps_output": {"address": 46613, "count": 1, "type": "u16", "rw": True},
+    "export_power_limit": {"address": 46616, "count": 2, "type": "i32", "scale": 1, "unit": "W", "rw": True},
+    "work_mode": {"address": 49203, "count": 1, "type": "u16", "rw": True},
 }
 
 # Sensor definitions for Home Assistant
@@ -219,5 +227,51 @@ SENSOR_DEFINITIONS = {
         "state_class": "measurement",
         "unit": "Hz",
         "icon": "mdi:sine-wave",
+    },
+    "bms1_soc": {
+        "name": "Battery SoC",
+        "device_class": "battery",
+        "state_class": "measurement",
+        "unit": "%",
+        "icon": "mdi:battery",
+    },
+}
+
+# Select entity definitions for Home Assistant
+SELECT_DEFINITIONS = {
+    "eps_output": {
+        "name": "EPS Output",
+        "icon": "mdi:power-standby",
+        "options": {
+            0: "Disable",
+            2: "EPS Mode",
+            3: "UPS Mode",
+        },
+    },
+    "work_mode": {
+        "name": "Work Mode",
+        "icon": "mdi:cog",
+        "options": {
+            1: "Self Use",
+            2: "Feedin Priority",
+            3: "Backup",
+            4: "Peak Shaving",
+            6: "Force Charge",
+            7: "Force Discharge",
+        },
+    },
+}
+
+# Number entity definitions for Home Assistant
+NUMBER_DEFINITIONS = {
+    "export_power_limit": {
+        "name": "Export Power Limit",
+        "icon": "mdi:transmission-tower",
+        "min": 0,
+        "max": 100000,  # 100kW max (actual max depends on inverter model)
+        "step": 100,
+        "unit": "W",
+        "device_class": "power",
+        "mode": "box",
     },
 }
