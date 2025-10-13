@@ -70,6 +70,13 @@ REGISTERS = {
     # BMS Information (Read-Only)
     "bms1_soc": {"address": 37612, "count": 1, "type": "u16", "scale": 1, "unit": "%"},
 
+    # Remote Control Registers (Read/Write)
+    "remote_control": {"address": 46001, "count": 1, "type": "u16", "scale": 1, "rw": True},
+    "remote_timeout_set": {"address": 46002, "count": 1, "type": "u16", "scale": 1, "unit": "s", "rw": True},
+    "remote_active_power": {"address": 46003, "count": 2, "type": "i32", "scale": 1, "unit": "W", "rw": True},
+    "remote_reactive_power": {"address": 46005, "count": 2, "type": "i32", "scale": 1, "unit": "Var", "rw": True},
+    "remote_timeout_countdown": {"address": 46007, "count": 1, "type": "u16", "scale": 1, "unit": "s"},
+
     # Control Registers (Read/Write)
     "eps_output": {"address": 46613, "count": 1, "type": "u16", "scale": 1, "rw": True},
     # "export_power_limit": {"address": 46616, "count": 2, "type": "i32", "scale": 1, "unit": "W", "rw": True},
@@ -299,6 +306,40 @@ SENSOR_DEFINITIONS = {
         "name": "Network Status",
         "icon": "mdi:network",
     },
+
+    # Remote Control Status Sensors
+    "remote_control": {
+        "name": "Remote Control Status",
+        "icon": "mdi:remote",
+    },
+    "remote_timeout_set": {
+        "name": "Remote Timeout Setting",
+        "device_class": "duration",
+        "state_class": "measurement",
+        "unit": "s",
+        "icon": "mdi:timer",
+    },
+    "remote_active_power": {
+        "name": "Remote Active Power Command",
+        "device_class": "power",
+        "state_class": "measurement",
+        "unit": "W",
+        "icon": "mdi:flash",
+    },
+    "remote_reactive_power": {
+        "name": "Remote Reactive Power Command",
+        "device_class": "reactive_power",
+        "state_class": "measurement",
+        "unit": "Var",
+        "icon": "mdi:flash-outline",
+    },
+    "remote_timeout_countdown": {
+        "name": "Remote Timeout Countdown",
+        "device_class": "duration",
+        "state_class": "measurement",
+        "unit": "s",
+        "icon": "mdi:timer-sand",
+    },
 }
 
 # Select entity definitions for Home Assistant
@@ -324,6 +365,21 @@ SELECT_DEFINITIONS = {
     #         7: "Force Discharge",
     #     },
     # },
+    "remote_control_mode": {
+        "name": "Remote Control Mode",
+        "icon": "mdi:remote",
+        "options": {
+            0: "Disabled",
+            1: "INV Discharge (PV Priority)",
+            3: "INV Charge (PV Priority)",
+            5: "Battery Discharge",
+            7: "Battery Charge",
+            9: "Grid Discharge",
+            11: "Grid Charge",
+            13: "INV Discharge (AC First)",
+            15: "INV Charge (AC First)",
+        },
+    },
 }
 
 # Number entity definitions for Home Assistant
@@ -384,5 +440,33 @@ NUMBER_DEFINITIONS = {
         "step": 1,
         "unit": "%",
         "mode": "slider",
+    },
+    "remote_active_power": {
+        "name": "Remote Active Power Control",
+        "icon": "mdi:flash",
+        "min": -100000,  # -100kW (charging/import)
+        "max": 100000,   # +100kW (discharging/export)
+        "step": 100,
+        "unit": "W",
+        "device_class": "power",
+        "mode": "box",
+    },
+    "remote_reactive_power": {
+        "name": "Remote Reactive Power Control",
+        "icon": "mdi:flash-outline",
+        "min": -100000,
+        "max": 100000,
+        "step": 100,
+        "unit": "Var",
+        "mode": "box",
+    },
+    "remote_timeout_set": {
+        "name": "Remote Timeout Control",
+        "icon": "mdi:timer",
+        "min": 0,
+        "max": 3600,  # 1 hour max
+        "step": 10,
+        "unit": "s",
+        "mode": "box",
     },
 }
