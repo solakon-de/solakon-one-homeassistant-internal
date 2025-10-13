@@ -72,13 +72,13 @@ REGISTERS = {
 
     # Control Registers (Read/Write)
     "eps_output": {"address": 46613, "count": 1, "type": "u16", "scale": 1, "rw": True},
-    "export_power_limit": {"address": 46616, "count": 2, "type": "i32", "scale": 1, "unit": "W", "rw": True},
-    "import_power_limit": {"address": 46501, "count": 2, "type": "i32", "scale": 1, "unit": "W", "rw": True},
-    "export_peak_limit": {"address": 46504, "count": 2, "type": "i32", "scale": 1, "unit": "W", "rw": True},
+    # "export_power_limit": {"address": 46616, "count": 2, "type": "i32", "scale": 1, "unit": "W", "rw": True},
+    # "import_power_limit": {"address": 46501, "count": 2, "type": "i32", "scale": 1, "unit": "W", "rw": True},
+    # "export_peak_limit": {"address": 46504, "count": 2, "type": "i32", "scale": 1, "unit": "W", "rw": True},
     "minimum_soc": {"address": 46609, "count": 1, "type": "u16", "scale": 1, "unit": "%", "rw": True},
     "maximum_soc": {"address": 46610, "count": 1, "type": "u16", "scale": 1, "unit": "%", "rw": True},
     "minimum_soc_ongrid": {"address": 46611, "count": 1, "type": "u16", "scale": 1, "unit": "%", "rw": True},
-    "work_mode": {"address": 49203, "count": 1, "type": "u16", "scale": 1, "rw": True},
+    # "work_mode": {"address": 49203, "count": 1, "type": "u16", "scale": 1, "rw": True},
     "network_status": {"address": 49240, "count": 1, "type": "u16", "scale": 1},
 }
 
@@ -249,27 +249,27 @@ SENSOR_DEFINITIONS = {
         "name": "EPS Output Mode",
         "icon": "mdi:power-standby",
     },
-    "export_power_limit": {
-        "name": "Export Power Limit",
-        "device_class": "power",
-        "state_class": "measurement",
-        "unit": "W",
-        "icon": "mdi:transmission-tower-export",
-    },
-    "import_power_limit": {
-        "name": "Import Power Limit",
-        "device_class": "power",
-        "state_class": "measurement",
-        "unit": "W",
-        "icon": "mdi:transmission-tower-import",
-    },
-    "export_peak_limit": {
-        "name": "Export Peak Limit",
-        "device_class": "power",
-        "state_class": "measurement",
-        "unit": "W",
-        "icon": "mdi:transmission-tower-export",
-    },
+    # "export_power_limit": {
+    #     "name": "Export Power Limit",
+    #     "device_class": "power",
+    #     "state_class": "measurement",
+    #     "unit": "W",
+    #     "icon": "mdi:transmission-tower-export",
+    # },
+    # "import_power_limit": {
+    #     "name": "Import Power Limit",
+    #     "device_class": "power",
+    #     "state_class": "measurement",
+    #     "unit": "W",
+    #     "icon": "mdi:transmission-tower-import",
+    # },
+    # "export_peak_limit": {
+    #     "name": "Export Peak Limit",
+    #     "device_class": "power",
+    #     "state_class": "measurement",
+    #     "unit": "W",
+    #     "icon": "mdi:transmission-tower-export",
+    # },
     "minimum_soc": {
         "name": "Minimum State of Charge",
         "device_class": "battery",
@@ -291,10 +291,10 @@ SENSOR_DEFINITIONS = {
         "unit": "%",
         "icon": "mdi:battery-low",
     },
-    "work_mode": {
-        "name": "Work Mode",
-        "icon": "mdi:cog",
-    },
+    # "work_mode": {
+    #     "name": "Work Mode",
+    #     "icon": "mdi:cog",
+    # },
     "network_status": {
         "name": "Network Status",
         "icon": "mdi:network",
@@ -312,52 +312,52 @@ SELECT_DEFINITIONS = {
             3: "UPS Mode",
         },
     },
-    "work_mode": {
-        "name": "Work Mode Control",
-        "icon": "mdi:cog",
-        "options": {
-            1: "Self Use",
-            2: "Feedin Priority",
-            3: "Backup",
-            4: "Peak Shaving",
-            6: "Force Charge",
-            7: "Force Discharge",
-        },
-    },
+    # "work_mode": {
+    #     "name": "Work Mode Control",
+    #     "icon": "mdi:cog",
+    #     "options": {
+    #         1: "Self Use",
+    #         2: "Feedin Priority",
+    #         3: "Backup",
+    #         4: "Peak Shaving",
+    #         6: "Force Charge",
+    #         7: "Force Discharge",
+    #     },
+    # },
 }
 
 # Number entity definitions for Home Assistant
 NUMBER_DEFINITIONS = {
-    "export_power_limit": {
-        "name": "Export Power Limit Control",
-        "icon": "mdi:transmission-tower-export",
-        "min": 0,
-        "max": 100000,  # 100kW max, will be adjusted based on inverter Pmax
-        "step": 100,
-        "unit": "W",
-        "device_class": "power",
-        "mode": "box",
-    },
-    "import_power_limit": {
-        "name": "Import Power Limit Control",
-        "icon": "mdi:transmission-tower-import",
-        "min": 0,
-        "max": 100000,  # 100kW max
-        "step": 100,
-        "unit": "W",
-        "device_class": "power",
-        "mode": "box",
-    },
-    "export_peak_limit": {
-        "name": "Export Peak Limit Control",
-        "icon": "mdi:transmission-tower-export",
-        "min": 0,
-        "max": 100000,  # 100kW max
-        "step": 100,
-        "unit": "W",
-        "device_class": "power",
-        "mode": "box",
-    },
+    # "export_power_limit": {
+    #     "name": "Export Power Limit Control",
+    #     "icon": "mdi:transmission-tower-export",
+    #     "min": 0,
+    #     "max": 100000,  # 100kW max, will be adjusted based on inverter Pmax
+    #     "step": 100,
+    #     "unit": "W",
+    #     "device_class": "power",
+    #     "mode": "box",
+    # },
+    # "import_power_limit": {
+    #     "name": "Import Power Limit Control",
+    #     "icon": "mdi:transmission-tower-import",
+    #     "min": 0,
+    #     "max": 100000,  # 100kW max
+    #     "step": 100,
+    #     "unit": "W",
+    #     "device_class": "power",
+    #     "mode": "box",
+    # },
+    # "export_peak_limit": {
+    #     "name": "Export Peak Limit Control",
+    #     "icon": "mdi:transmission-tower-export",
+    #     "min": 0,
+    #     "max": 100000,  # 100kW max
+    #     "step": 100,
+    #     "unit": "W",
+    #     "device_class": "power",
+    #     "mode": "box",
+    # },
     "minimum_soc": {
         "name": "Minimum SoC Control",
         "icon": "mdi:battery-low",
