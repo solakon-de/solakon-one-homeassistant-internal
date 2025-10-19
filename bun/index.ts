@@ -1042,9 +1042,9 @@ const server = Bun.serve({
   </div>
 
   <div class="section custom">
-    <h2>🔧 Custom Register Testing</h2>
+    <h2>Custom Register Testing</h2>
     <div class="warning-text">
-      <strong>⚠️ Warning:</strong> This is an advanced feature. Writing to wrong registers can damage your inverter.
+      <strong>Warning:</strong> This is an advanced feature. Writing to wrong registers can damage your inverter.
       Always consult the Modbus documentation before writing to custom registers.
     </div>
 
@@ -1109,7 +1109,7 @@ const server = Bun.serve({
         <input type="number" id="writeValue" placeholder="Enter value" step="any">
       </div>
     </div>
-    <button class="button warning" onclick="writeCustomRegister()">⚠️ Write Register</button>
+    <button class="button warning" onclick="writeCustomRegister()">Write Register</button>
     <button class="button" onclick="loadWritePreset('WORK_MODE')">Load Work Mode Example</button>
     <button class="button" onclick="loadWritePreset('MIN_SOC')">Load Min SoC Example</button>
     <div id="customWriteResult" class="result"></div>
@@ -1148,7 +1148,7 @@ const server = Bun.serve({
       });
       const data = await res.json();
       document.getElementById('workModeResult').innerHTML =
-        '<strong>Result:</strong> ' + (data.success ? 'Success ✓' : 'Failed ✗');
+        '<strong>Result:</strong> ' + (data.success ? 'Success' : 'Failed');
     }
 
     async function setSoCLimits() {
@@ -1162,7 +1162,7 @@ const server = Bun.serve({
       });
       const data = await res.json();
       document.getElementById('socResult').innerHTML =
-        '<strong>Result:</strong> ' + (data.success ? 'Success ✓' : 'Failed ✗');
+        '<strong>Result:</strong> ' + (data.success ? 'Success' : 'Failed');
     }
 
     async function setBatteryLimits() {
@@ -1176,7 +1176,7 @@ const server = Bun.serve({
       });
       const data = await res.json();
       document.getElementById('batteryLimitsResult').innerHTML =
-        '<strong>Result:</strong> ' + (data.success ? 'Success ✓' : 'Failed ✗');
+        '<strong>Result:</strong> ' + (data.success ? 'Success' : 'Failed');
     }
 
     async function setPowerLimits() {
@@ -1190,7 +1190,7 @@ const server = Bun.serve({
       });
       const data = await res.json();
       document.getElementById('powerLimitsResult').innerHTML =
-        '<strong>Result:</strong> ' + (data.success ? 'Success ✓' : 'Failed ✗');
+        '<strong>Result:</strong> ' + (data.success ? 'Success' : 'Failed');
     }
 
     async function setRemotePower() {
@@ -1203,7 +1203,7 @@ const server = Bun.serve({
       });
       const data = await res.json();
       document.getElementById('remotePowerResult').innerHTML =
-        '<strong>Result:</strong> ' + (data.success ? 'Success ✓' : 'Failed ✗');
+        '<strong>Result:</strong> ' + (data.success ? 'Success' : 'Failed');
     }
 
     // Custom Register Functions
@@ -1230,19 +1230,19 @@ const server = Bun.serve({
         if (data.success) {
           resultDiv.className = 'result success';
           resultDiv.innerHTML =
-            '<strong>✓ Read Success</strong><pre>' +
+            '<strong>Read Success</strong><pre>' +
             JSON.stringify(data, null, 2) +
             '</pre>';
 
           addToHistory('READ', address, length, type, scale, data.value, true);
         } else {
           resultDiv.className = 'result error';
-          resultDiv.innerHTML = '<strong>✗ Read Failed</strong><br>' + (data.error || 'Unknown error');
+          resultDiv.innerHTML = '<strong>Read Failed</strong><br>' + (data.error || 'Unknown error');
           addToHistory('READ', address, length, type, scale, null, false, data.error);
         }
       } catch (error) {
         resultDiv.className = 'result error';
-        resultDiv.innerHTML = '<strong>✗ Error:</strong> ' + error.message;
+        resultDiv.innerHTML = '<strong>Error:</strong> ' + error.message;
         addToHistory('READ', address, length, type, scale, null, false, error.message);
       }
     }
@@ -1278,7 +1278,7 @@ const server = Bun.serve({
         if (data.success) {
           resultDiv.className = 'result success';
           resultDiv.innerHTML =
-            '<strong>✓ Write Success</strong><pre>' +
+            '<strong>Write Success</strong><pre>' +
             JSON.stringify(data, null, 2) +
             '</pre>' +
             '<p><em>Tip: Read back the register to verify the change.</em></p>';
@@ -1286,12 +1286,12 @@ const server = Bun.serve({
           addToHistory('WRITE', address, length, type, scale, value, true);
         } else {
           resultDiv.className = 'result error';
-          resultDiv.innerHTML = '<strong>✗ Write Failed</strong><br>' + (data.error || 'Unknown error');
+          resultDiv.innerHTML = '<strong>Write Failed</strong><br>' + (data.error || 'Unknown error');
           addToHistory('WRITE', address, length, type, scale, value, false, data.error);
         }
       } catch (error) {
         resultDiv.className = 'result error';
-        resultDiv.innerHTML = '<strong>✗ Error:</strong> ' + error.message;
+        resultDiv.innerHTML = '<strong>Error:</strong> ' + error.message;
         addToHistory('WRITE', address, length, type, scale, value, false, error.message);
       }
     }
@@ -1370,7 +1370,7 @@ const server = Bun.serve({
         const errorText = item.error ? \` - Error: \${item.error}\` : '';
 
         return \`<div class="\${className}">
-          [\${item.timestamp}] \${item.operation} addr=\${item.address} len=\${item.length} type=\${item.type}\${scaleText}\${valueText} - \${item.success ? '✓' : '✗'}\${errorText}
+          [\${item.timestamp}] \${item.operation} addr=\${item.address} len=\${item.length} type=\${item.type}\${scaleText}\${valueText} - \${item.success ? 'OK' : 'FAIL'}\${errorText}
         </div>\`;
       }).join('');
     }
@@ -1408,5 +1408,5 @@ const server = Bun.serve({
   },
 });
 
-console.log(`🚀 FoxESS Modbus Server running at http://localhost:${server.port}`);
-console.log(`📊 Open http://localhost:${server.port} to access the control panel`);
+console.log(`FoxESS Modbus Server running at http://localhost:${server.port}`);
+console.log(`Open http://localhost:${server.port} to access the control panel`);
