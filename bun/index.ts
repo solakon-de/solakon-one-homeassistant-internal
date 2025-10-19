@@ -1,7 +1,7 @@
 import ModbusRTU from 'modbus-serial';
 
 // Configuration
-const INVERTER_IP = '192.168.1.121'; // Replace with your inverter's IP
+const INVERTER_IP = '192.168.1.148'; // Replace with your inverter's IP
 const INVERTER_PORT = 502; // Standard Modbus TCP port
 const SLAVE_ID = 1; // Slave address (1-247)
 const TIMEOUT = 5000; // Connection timeout in ms
@@ -879,6 +879,73 @@ const server = Bun.serve({
         return Response.json({ success }, { headers: corsHeaders });
       }
 
+      // Custom register read endpoint
+      if (url.pathname === '/api/custom/read' && req.method === 'POST') {
+        const body = await req.json();
+        const { address, length, type, scale } = body;
+
+        if (!address || !length || !type) {
+          return Response.json(
+            { error: 'Missing required fields: address, length, type' },
+            { status: 400, headers: corsHeaders },
+          );
+        }
+
+        const customRegister = {
+          address: parseInt(address),
+          length: parseInt(length),
+          type,
+          scale: scale ? parseFloat(scale) : undefined,
+        };
+
+        const client = await ensureConnection();
+        const value = await client.readRegister(customRegister);
+
+        return Response.json(
+          {
+            success: value !== null,
+            value,
+            register: customRegister,
+          },
+          { headers: corsHeaders },
+        );
+      }
+
+      // Custom register write endpoint
+      if (url.pathname === '/api/custom/write' && req.method === 'POST') {
+        const body = await req.json();
+        const { address, length, type, scale, value } = body;
+
+        if (!address || !length || !type || value === undefined) {
+          return Response.json(
+            { error: 'Missing required fields: address, length, type, value' },
+            { status: 400, headers: corsHeaders },
+          );
+        }
+
+        const customRegister = {
+          address: parseInt(address),
+          length: parseInt(length),
+          type,
+          scale: scale ? parseFloat(scale) : undefined,
+        };
+
+        const client = await ensureConnection();
+        const success = await client.writeRegister(
+          customRegister,
+          parseFloat(value),
+        );
+
+        return Response.json(
+          {
+            success,
+            register: customRegister,
+            writtenValue: value,
+          },
+          { headers: corsHeaders },
+        );
+      }
+
       // Test page
       if (url.pathname === '/') {
         return new Response(
@@ -891,13 +958,29 @@ const server = Bun.serve({
     body { font-family: Arial, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; }
     h1 { color: #333; }
     .section { background: #f5f5f5; padding: 20px; margin: 20px 0; border-radius: 8px; }
+    .section.custom { background: #fff3cd; border: 2px solid #ffc107; }
     .button { background: #4CAF50; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin: 5px; }
     .button:hover { background: #45a049; }
     .button.danger { background: #f44336; }
     .button.danger:hover { background: #da190b; }
-    input { padding: 8px; margin: 5px; border: 1px solid #ddd; border-radius: 4px; }
+    .button.info { background: #17a2b8; }
+    .button.info:hover { background: #138496; }
+    .button.warning { background: #ffc107; color: #000; }
+    .button.warning:hover { background: #e0a800; }
+    input, select { padding: 8px; margin: 5px; border: 1px solid #ddd; border-radius: 4px; }
+    select { min-width: 120px; }
     .result { margin-top: 10px; padding: 10px; background: #fff; border-radius: 4px; }
+    .result.error { background: #f8d7da; border: 1px solid #f5c6cb; }
+    .result.success { background: #d4edda; border: 1px solid #c3e6cb; }
     pre { background: #fff; padding: 10px; overflow-x: auto; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin: 10px 0; }
+    .field { display: flex; flex-direction: column; }
+    .field label { font-weight: bold; margin-bottom: 5px; font-size: 14px; }
+    .warning-text { color: #856404; background: #fff3cd; padding: 10px; border-radius: 4px; margin: 10px 0; }
+    #customHistory { max-height: 300px; overflow-y: auto; margin-top: 10px; }
+    .history-item { padding: 8px; margin: 5px 0; background: #fff; border-left: 3px solid #4CAF50; border-radius: 4px; font-family: monospace; font-size: 12px; }
+    .history-item.write { border-left-color: #ffc107; }
+    .history-item.error { border-left-color: #f44336; }
   </style>
 </head>
 <body>
@@ -956,6 +1039,86 @@ const server = Bun.serve({
     Power: <input type="number" id="remotePower" value="0">W
     <button class="button" onclick="setRemotePower()">Set Remote Power</button>
     <div id="remotePowerResult" class="result"></div>
+  </div>
+
+  <div class="section custom">
+    <h2>🔧 Custom Register Testing</h2>
+    <div class="warning-text">
+      <strong>⚠️ Warning:</strong> This is an advanced feature. Writing to wrong registers can damage your inverter.
+      Always consult the Modbus documentation before writing to custom registers.
+    </div>
+
+    <h3>Read Custom Register</h3>
+    <div class="grid">
+      <div class="field">
+        <label>Register Address:</label>
+        <input type="number" id="readAddress" placeholder="e.g., 39070" value="39070">
+      </div>
+      <div class="field">
+        <label>Length (registers):</label>
+        <input type="number" id="readLength" placeholder="1 or 2" value="1" min="1" max="16">
+      </div>
+      <div class="field">
+        <label>Data Type:</label>
+        <select id="readType">
+          <option value="u16">U16 (Unsigned 16-bit)</option>
+          <option value="i16">I16 (Signed 16-bit)</option>
+          <option value="u32">U32 (Unsigned 32-bit)</option>
+          <option value="i32">I32 (Signed 32-bit)</option>
+          <option value="string">String</option>
+          <option value="bitfield16">Bitfield 16</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Scale (optional):</label>
+        <input type="number" id="readScale" placeholder="e.g., 10, 100, 1000" step="any">
+      </div>
+    </div>
+    <button class="button info" onclick="readCustomRegister()">Read Register</button>
+    <button class="button" onclick="loadReadPreset('PV1_VOLTAGE')">Load PV1 Voltage Example</button>
+    <button class="button" onclick="loadReadPreset('WORK_MODE')">Load Work Mode Example</button>
+    <div id="customReadResult" class="result"></div>
+
+    <hr style="margin: 30px 0; border: none; border-top: 2px solid #ddd;">
+
+    <h3>Write Custom Register</h3>
+    <div class="grid">
+      <div class="field">
+        <label>Register Address:</label>
+        <input type="number" id="writeAddress" placeholder="e.g., 49203" value="49203">
+      </div>
+      <div class="field">
+        <label>Length (registers):</label>
+        <input type="number" id="writeLength" placeholder="1 or 2" value="1" min="1" max="16">
+      </div>
+      <div class="field">
+        <label>Data Type:</label>
+        <select id="writeType">
+          <option value="u16">U16 (Unsigned 16-bit)</option>
+          <option value="i16">I16 (Signed 16-bit)</option>
+          <option value="u32">U32 (Unsigned 32-bit)</option>
+          <option value="i32">I32 (Signed 32-bit)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Scale (optional):</label>
+        <input type="number" id="writeScale" placeholder="e.g., 10, 100, 1000" step="any">
+      </div>
+      <div class="field">
+        <label>Value to Write:</label>
+        <input type="number" id="writeValue" placeholder="Enter value" step="any">
+      </div>
+    </div>
+    <button class="button warning" onclick="writeCustomRegister()">⚠️ Write Register</button>
+    <button class="button" onclick="loadWritePreset('WORK_MODE')">Load Work Mode Example</button>
+    <button class="button" onclick="loadWritePreset('MIN_SOC')">Load Min SoC Example</button>
+    <div id="customWriteResult" class="result"></div>
+
+    <hr style="margin: 30px 0; border: none; border-top: 2px solid #ddd;">
+
+    <h3>Operation History</h3>
+    <button class="button" onclick="clearHistory()">Clear History</button>
+    <div id="customHistory"></div>
   </div>
 
   <script>
@@ -1042,6 +1205,185 @@ const server = Bun.serve({
       document.getElementById('remotePowerResult').innerHTML =
         '<strong>Result:</strong> ' + (data.success ? 'Success ✓' : 'Failed ✗');
     }
+
+    // Custom Register Functions
+    let operationHistory = [];
+
+    async function readCustomRegister() {
+      const address = document.getElementById('readAddress').value;
+      const length = document.getElementById('readLength').value;
+      const type = document.getElementById('readType').value;
+      const scale = document.getElementById('readScale').value;
+
+      const resultDiv = document.getElementById('customReadResult');
+      resultDiv.className = 'result';
+      resultDiv.innerHTML = '<em>Reading...</em>';
+
+      try {
+        const res = await fetch('/api/custom/read', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ address, length, type, scale: scale || null })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          resultDiv.className = 'result success';
+          resultDiv.innerHTML =
+            '<strong>✓ Read Success</strong><pre>' +
+            JSON.stringify(data, null, 2) +
+            '</pre>';
+
+          addToHistory('READ', address, length, type, scale, data.value, true);
+        } else {
+          resultDiv.className = 'result error';
+          resultDiv.innerHTML = '<strong>✗ Read Failed</strong><br>' + (data.error || 'Unknown error');
+          addToHistory('READ', address, length, type, scale, null, false, data.error);
+        }
+      } catch (error) {
+        resultDiv.className = 'result error';
+        resultDiv.innerHTML = '<strong>✗ Error:</strong> ' + error.message;
+        addToHistory('READ', address, length, type, scale, null, false, error.message);
+      }
+    }
+
+    async function writeCustomRegister() {
+      const address = document.getElementById('writeAddress').value;
+      const length = document.getElementById('writeLength').value;
+      const type = document.getElementById('writeType').value;
+      const scale = document.getElementById('writeScale').value;
+      const value = document.getElementById('writeValue').value;
+
+      if (!value) {
+        alert('Please enter a value to write');
+        return;
+      }
+
+      if (!confirm(\`Are you sure you want to write value "\${value}" to register \${address}?\\n\\nThis operation could affect your inverter's behavior.\`)) {
+        return;
+      }
+
+      const resultDiv = document.getElementById('customWriteResult');
+      resultDiv.className = 'result';
+      resultDiv.innerHTML = '<em>Writing...</em>';
+
+      try {
+        const res = await fetch('/api/custom/write', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ address, length, type, scale: scale || null, value })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          resultDiv.className = 'result success';
+          resultDiv.innerHTML =
+            '<strong>✓ Write Success</strong><pre>' +
+            JSON.stringify(data, null, 2) +
+            '</pre>' +
+            '<p><em>Tip: Read back the register to verify the change.</em></p>';
+
+          addToHistory('WRITE', address, length, type, scale, value, true);
+        } else {
+          resultDiv.className = 'result error';
+          resultDiv.innerHTML = '<strong>✗ Write Failed</strong><br>' + (data.error || 'Unknown error');
+          addToHistory('WRITE', address, length, type, scale, value, false, data.error);
+        }
+      } catch (error) {
+        resultDiv.className = 'result error';
+        resultDiv.innerHTML = '<strong>✗ Error:</strong> ' + error.message;
+        addToHistory('WRITE', address, length, type, scale, value, false, error.message);
+      }
+    }
+
+    function loadReadPreset(preset) {
+      const presets = {
+        'PV1_VOLTAGE': { address: 39070, length: 1, type: 'i16', scale: 10 },
+        'WORK_MODE': { address: 49203, length: 1, type: 'u16', scale: '' },
+        'ACTIVE_POWER': { address: 39134, length: 2, type: 'i32', scale: 1000 },
+        'TOTAL_GENERATION': { address: 39149, length: 2, type: 'u32', scale: 100 },
+      };
+
+      const p = presets[preset];
+      if (p) {
+        document.getElementById('readAddress').value = p.address;
+        document.getElementById('readLength').value = p.length;
+        document.getElementById('readType').value = p.type;
+        document.getElementById('readScale').value = p.scale;
+      }
+    }
+
+    function loadWritePreset(preset) {
+      const presets = {
+        'WORK_MODE': { address: 49203, length: 1, type: 'u16', scale: '', value: 1 },
+        'MIN_SOC': { address: 46609, length: 1, type: 'u16', scale: '', value: 20 },
+        'MAX_CHARGE_CURRENT': { address: 46607, length: 1, type: 'i16', scale: 10, value: 20 },
+      };
+
+      const p = presets[preset];
+      if (p) {
+        document.getElementById('writeAddress').value = p.address;
+        document.getElementById('writeLength').value = p.length;
+        document.getElementById('writeType').value = p.type;
+        document.getElementById('writeScale').value = p.scale;
+        document.getElementById('writeValue').value = p.value;
+      }
+    }
+
+    function addToHistory(operation, address, length, type, scale, value, success, error = null) {
+      const timestamp = new Date().toLocaleTimeString();
+      const historyItem = {
+        timestamp,
+        operation,
+        address,
+        length,
+        type,
+        scale,
+        value,
+        success,
+        error
+      };
+
+      operationHistory.unshift(historyItem);
+      if (operationHistory.length > 20) {
+        operationHistory = operationHistory.slice(0, 20);
+      }
+
+      updateHistoryDisplay();
+    }
+
+    function updateHistoryDisplay() {
+      const historyDiv = document.getElementById('customHistory');
+      if (operationHistory.length === 0) {
+        historyDiv.innerHTML = '<p style="color: #999;">No operations yet</p>';
+        return;
+      }
+
+      historyDiv.innerHTML = operationHistory.map(item => {
+        const className = item.success ?
+          (item.operation === 'WRITE' ? 'history-item write' : 'history-item') :
+          'history-item error';
+
+        const scaleText = item.scale ? \` scale=\${item.scale}\` : '';
+        const valueText = item.value !== null && item.value !== undefined ?
+          \` value=\${item.value}\` : '';
+        const errorText = item.error ? \` - Error: \${item.error}\` : '';
+
+        return \`<div class="\${className}">
+          [\${item.timestamp}] \${item.operation} addr=\${item.address} len=\${item.length} type=\${item.type}\${scaleText}\${valueText} - \${item.success ? '✓' : '✗'}\${errorText}
+        </div>\`;
+      }).join('');
+    }
+
+    function clearHistory() {
+      if (confirm('Clear operation history?')) {
+        operationHistory = [];
+        updateHistoryDisplay();
+      }
+    }
+
+    // Initialize history display
+    updateHistoryDisplay();
   </script>
 </body>
 </html>

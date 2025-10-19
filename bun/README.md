@@ -205,6 +205,65 @@ The web interface at http://localhost:3000 provides an easy way to test all writ
 
 Each operation shows success/failure status immediately.
 
+## Custom Register Testing (Advanced)
+
+The web interface includes a powerful **Custom Register Testing** section for experimenting with any Modbus register:
+
+### Features
+
+- **Read Custom Registers**: Specify address, length, type, and scale to read any register
+- **Write Custom Registers**: Write values to any writable register with safety confirmations
+- **Preset Examples**: Load common registers with one click
+- **Operation History**: Track all read/write operations with timestamps
+- **Type Support**: U16, I16, U32, I32, String, Bitfield16
+- **Automatic Scaling**: Apply scale factors (10, 100, 1000, etc.)
+
+### Read Custom Register
+
+Example: Read PV1 Voltage (Register 39070)
+
+```
+Address: 39070
+Length: 1
+Type: I16
+Scale: 10
+```
+
+### Write Custom Register
+
+Example: Set Work Mode to Self Use (Register 49203)
+
+```
+Address: 49203
+Length: 1
+Type: U16
+Scale: (empty)
+Value: 1
+```
+
+### API Usage
+
+**Custom Read**
+```bash
+curl -X POST http://localhost:3000/api/custom/read \
+  -H "Content-Type: application/json" \
+  -d '{"address": 39070, "length": 1, "type": "i16", "scale": 10}'
+```
+
+**Custom Write**
+```bash
+curl -X POST http://localhost:3000/api/custom/write \
+  -H "Content-Type: application/json" \
+  -d '{"address": 49203, "length": 1, "type": "u16", "value": 1}'
+```
+
+### Safety Features
+
+- Confirmation dialog before writing
+- Operation history with error tracking
+- Color-coded results (success/error)
+- Ability to verify writes by reading back
+
 ## Important Notes
 
 - **Safety First**: Always understand what each register does before writing to it
