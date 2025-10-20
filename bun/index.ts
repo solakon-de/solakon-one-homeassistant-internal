@@ -1118,21 +1118,40 @@ const server = Bun.serve({
   </div>
 
   <div class="section" style="background: #e3f2fd; border: 2px solid #2196F3;">
-    <h2>🎛️ Remote Control - Alle Register (46001-46005)</h2>
+    <h2>Remote Control - Alle Register (46001-46005)</h2>
     <p>Verwalte alle Remote Control Register zusammen</p>
 
     <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-      <button class="button info" onclick="readRemoteControl()">🔄 Alle Auslesen</button>
-      <button class="button" onclick="writeRemoteControl()">✅ Alle Setzen</button>
+      <button class="button info" onclick="readRemoteControl()">Alle Auslesen</button>
+      <button class="button" onclick="writeRemoteControl()">Alle Setzen</button>
     </div>
 
     <div class="grid">
       <div class="field">
         <label>Remote Control (46001) - Bitfeld:</label>
-        <input type="number" id="rc_control" value="0" min="0" max="65535">
-        <small style="color: #666;">Bit 0: Enable (0=Disable, 1=Enable)<br>
-        Bit 1: Direction (0=Generation, 1=Consumption)<br>
-        Bits 3-2: Target (00=AC, 01=Battery, 10=Grid)</small>
+        <input type="number" id="rc_control" value="5" min="0" max="65535" readonly style="background: #f0f0f0;">
+
+        <div style="margin-top: 10px; padding: 10px; background: #f0f0f0; border-radius: 4px;">
+          <div style="margin-bottom: 8px;">
+            <input type="checkbox" id="rc_bit0" onchange="updateRemoteControlBitfield()">
+            <label for="rc_bit0" style="margin: 0 0 0 5px; font-size: 13px;">Bit 0: Enable (0=Disable, 1=Enable)</label>
+          </div>
+          <div style="margin-bottom: 8px;">
+            <input type="checkbox" id="rc_bit1" onchange="updateRemoteControlBitfield()">
+            <label for="rc_bit1" style="margin: 0 0 0 5px; font-size: 13px;">Bit 1: Direction (0=Generation, 1=Consumption)</label>
+          </div>
+          <div style="margin-bottom: 8px;">
+            <label style="font-size: 13px; font-weight: bold;">Bits 3-2: Target</label>
+            <div style="margin-left: 20px; margin-top: 5px;">
+              <input type="radio" name="rc_target" id="rc_target_ac" value="0" onchange="updateRemoteControlBitfield()">
+              <label for="rc_target_ac" style="margin: 0 15px 0 5px; font-size: 13px;">00 = AC</label>
+              <input type="radio" name="rc_target" id="rc_target_battery" value="1" checked onchange="updateRemoteControlBitfield()">
+              <label for="rc_target_battery" style="margin: 0 15px 0 5px; font-size: 13px;">01 = Battery</label>
+              <input type="radio" name="rc_target" id="rc_target_grid" value="2" onchange="updateRemoteControlBitfield()">
+              <label for="rc_target_grid" style="margin: 0 0 0 5px; font-size: 13px;">10 = Grid</label>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div class="field">
@@ -1676,23 +1695,27 @@ const server = Bun.serve({
 
         if (data.success) {
           // Update input fields with read values
-          document.getElementById('rc_control').value = data.remoteControl || 0;
+          const remoteControlValue = data.remoteControl || 0;
+          document.getElementById('rc_control').value = remoteControlValue;
           document.getElementById('rc_timeout').value = data.remoteTimeout || 0;
           document.getElementById('rc_active_power').value = data.remoteActivePower || 0;
           document.getElementById('rc_reactive_power').value = data.remoteReactivePower || 0;
 
+          // Update bitfield UI
+          loadRemoteControlBitfield(remoteControlValue);
+
           resultDiv.className = 'result success';
           resultDiv.innerHTML =
-            '<strong>✅ Erfolgreich ausgelesen</strong><pre>' +
+            '<strong>Erfolgreich ausgelesen</strong><pre>' +
             JSON.stringify(data, null, 2) +
             '</pre>';
         } else {
           resultDiv.className = 'result error';
-          resultDiv.innerHTML = '<strong>❌ Fehler beim Auslesen</strong>';
+          resultDiv.innerHTML = '<strong>Fehler beim Auslesen</strong>';
         }
       } catch (error) {
         resultDiv.className = 'result error';
-        resultDiv.innerHTML = '<strong>❌ Fehler:</strong> ' + error.message;
+        resultDiv.innerHTML = '<strong>Fehler:</strong> ' + error.message;
       }
     }
 
@@ -1726,19 +1749,19 @@ const server = Bun.serve({
         if (data.success) {
           resultDiv.className = 'result success';
           resultDiv.innerHTML =
-            '<strong>✅ Alle Register erfolgreich gesetzt</strong><pre>' +
+            '<strong>Alle Register erfolgreich gesetzt</strong><pre>' +
             JSON.stringify(data.details, null, 2) +
             '</pre>';
         } else {
           resultDiv.className = 'result error';
           resultDiv.innerHTML =
-            '<strong>⚠️ Teilweise erfolgreich</strong><pre>' +
+            '<strong>Teilweise erfolgreich</strong><pre>' +
             JSON.stringify(data.details, null, 2) +
             '</pre>';
         }
       } catch (error) {
         resultDiv.className = 'result error';
-        resultDiv.innerHTML = '<strong>❌ Fehler:</strong> ' + error.message;
+        resultDiv.innerHTML = '<strong>Fehler:</strong> ' + error.message;
       }
     }
 
@@ -1768,6 +1791,50 @@ const server = Bun.serve({
       // Auto-write
       await writeRemoteControl();
     }
+
+    // Remote Control Bitfield Functions
+    function updateRemoteControlBitfield() {
+      let value = 0;
+
+      // Bit 0: Enable
+      if (document.getElementById('rc_bit0').checked) {
+        value |= (1 << 0);
+      }
+
+      // Bit 1: Direction
+      if (document.getElementById('rc_bit1').checked) {
+        value |= (1 << 1);
+      }
+
+      // Bits 3-2: Target
+      const target = parseInt(document.querySelector('input[name="rc_target"]:checked').value);
+      value |= (target << 2);
+
+      document.getElementById('rc_control').value = value;
+    }
+
+    function loadRemoteControlBitfield(value) {
+      // Bit 0: Enable
+      document.getElementById('rc_bit0').checked = Boolean(value & (1 << 0));
+
+      // Bit 1: Direction
+      document.getElementById('rc_bit1').checked = Boolean(value & (1 << 1));
+
+      // Bits 3-2: Target
+      const target = (value >> 2) & 0b11;
+      if (target === 0) {
+        document.getElementById('rc_target_ac').checked = true;
+      } else if (target === 1) {
+        document.getElementById('rc_target_battery').checked = true;
+      } else if (target === 2) {
+        document.getElementById('rc_target_grid').checked = true;
+      }
+    }
+
+    // Initialize bitfield on page load
+    window.addEventListener('DOMContentLoaded', () => {
+      updateRemoteControlBitfield();
+    });
   </script>
 </body>
 </html>
