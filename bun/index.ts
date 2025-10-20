@@ -437,7 +437,7 @@ class FoxESSModbusReader {
         // Split 32-bit value into two 16-bit registers (high, low)
         registerValues = [(scaledValue >> 16) & 0xffff, scaledValue & 0xffff];
       } else {
-        // Single 16-bit register
+        // Single 16-bit register (includes u16, i16, bitfield16)
         registerValues = [scaledValue & 0xffff];
       }
 
@@ -1093,22 +1093,99 @@ const server = Bun.serve({
       </div>
       <div class="field">
         <label>Data Type:</label>
-        <select id="writeType">
+        <select id="writeType" onchange="toggleBitfieldUI()">
           <option value="u16">U16 (Unsigned 16-bit)</option>
           <option value="i16">I16 (Signed 16-bit)</option>
           <option value="u32">U32 (Unsigned 32-bit)</option>
           <option value="i32">I32 (Signed 32-bit)</option>
+          <option value="bitfield16">Bitfield16 (16 individual bits)</option>
         </select>
       </div>
       <div class="field">
         <label>Scale (optional):</label>
         <input type="number" id="writeScale" placeholder="e.g., 10, 100, 1000" step="any">
       </div>
-      <div class="field">
+      <div class="field" id="writeValueField">
         <label>Value to Write:</label>
         <input type="number" id="writeValue" placeholder="Enter value" step="any">
       </div>
     </div>
+
+    <div id="bitfieldUI" style="display: none; margin: 20px 0; padding: 15px; background: #f0f0f0; border-radius: 4px;">
+      <h4 style="margin-top: 0;">Set Individual Bits (LSB = Bit 0, MSB = Bit 15)</h4>
+      <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 10px; margin-bottom: 10px;">
+        <div style="display: flex; align-items: center; gap: 5px;">
+          <input type="checkbox" id="bit0" onchange="updateBitfieldValue()">
+          <label for="bit0" style="margin: 0; font-size: 12px;">Bit 0</label>
+        </div>
+        <div style="display: flex; align-items: center; gap: 5px;">
+          <input type="checkbox" id="bit1" onchange="updateBitfieldValue()">
+          <label for="bit1" style="margin: 0; font-size: 12px;">Bit 1</label>
+        </div>
+        <div style="display: flex; align-items: center; gap: 5px;">
+          <input type="checkbox" id="bit2" onchange="updateBitfieldValue()">
+          <label for="bit2" style="margin: 0; font-size: 12px;">Bit 2</label>
+        </div>
+        <div style="display: flex; align-items: center; gap: 5px;">
+          <input type="checkbox" id="bit3" onchange="updateBitfieldValue()">
+          <label for="bit3" style="margin: 0; font-size: 12px;">Bit 3</label>
+        </div>
+        <div style="display: flex; align-items: center; gap: 5px;">
+          <input type="checkbox" id="bit4" onchange="updateBitfieldValue()">
+          <label for="bit4" style="margin: 0; font-size: 12px;">Bit 4</label>
+        </div>
+        <div style="display: flex; align-items: center; gap: 5px;">
+          <input type="checkbox" id="bit5" onchange="updateBitfieldValue()">
+          <label for="bit5" style="margin: 0; font-size: 12px;">Bit 5</label>
+        </div>
+        <div style="display: flex; align-items: center; gap: 5px;">
+          <input type="checkbox" id="bit6" onchange="updateBitfieldValue()">
+          <label for="bit6" style="margin: 0; font-size: 12px;">Bit 6</label>
+        </div>
+        <div style="display: flex; align-items: center; gap: 5px;">
+          <input type="checkbox" id="bit7" onchange="updateBitfieldValue()">
+          <label for="bit7" style="margin: 0; font-size: 12px;">Bit 7</label>
+        </div>
+        <div style="display: flex; align-items: center; gap: 5px;">
+          <input type="checkbox" id="bit8" onchange="updateBitfieldValue()">
+          <label for="bit8" style="margin: 0; font-size: 12px;">Bit 8</label>
+        </div>
+        <div style="display: flex; align-items: center; gap: 5px;">
+          <input type="checkbox" id="bit9" onchange="updateBitfieldValue()">
+          <label for="bit9" style="margin: 0; font-size: 12px;">Bit 9</label>
+        </div>
+        <div style="display: flex; align-items: center; gap: 5px;">
+          <input type="checkbox" id="bit10" onchange="updateBitfieldValue()">
+          <label for="bit10" style="margin: 0; font-size: 12px;">Bit 10</label>
+        </div>
+        <div style="display: flex; align-items: center; gap: 5px;">
+          <input type="checkbox" id="bit11" onchange="updateBitfieldValue()">
+          <label for="bit11" style="margin: 0; font-size: 12px;">Bit 11</label>
+        </div>
+        <div style="display: flex; align-items: center; gap: 5px;">
+          <input type="checkbox" id="bit12" onchange="updateBitfieldValue()">
+          <label for="bit12" style="margin: 0; font-size: 12px;">Bit 12</label>
+        </div>
+        <div style="display: flex; align-items: center; gap: 5px;">
+          <input type="checkbox" id="bit13" onchange="updateBitfieldValue()">
+          <label for="bit13" style="margin: 0; font-size: 12px;">Bit 13</label>
+        </div>
+        <div style="display: flex; align-items: center; gap: 5px;">
+          <input type="checkbox" id="bit14" onchange="updateBitfieldValue()">
+          <label for="bit14" style="margin: 0; font-size: 12px;">Bit 14</label>
+        </div>
+        <div style="display: flex; align-items: center; gap: 5px;">
+          <input type="checkbox" id="bit15" onchange="updateBitfieldValue()">
+          <label for="bit15" style="margin: 0; font-size: 12px;">Bit 15</label>
+        </div>
+      </div>
+      <div style="padding: 10px; background: #fff; border-radius: 4px;">
+        <strong>Resulting Value:</strong> <span id="bitfieldValueDisplay">0</span> (0x<span id="bitfieldValueHex">0000</span>)
+        <button class="button" style="margin-left: 10px;" onclick="clearAllBits()">Clear All</button>
+        <button class="button" style="margin-left: 5px;" onclick="setAllBits()">Set All</button>
+      </div>
+    </div>
+
     <button class="button warning" onclick="writeCustomRegister()">Write Register</button>
     <button class="button" onclick="loadWritePreset('WORK_MODE')">Load Work Mode Example</button>
     <button class="button" onclick="loadWritePreset('MIN_SOC')">Load Min SoC Example</button>
@@ -1384,6 +1461,58 @@ const server = Bun.serve({
 
     // Initialize history display
     updateHistoryDisplay();
+
+    // Bitfield UI functions
+    function toggleBitfieldUI() {
+      const type = document.getElementById('writeType').value;
+      const bitfieldUI = document.getElementById('bitfieldUI');
+      const valueField = document.getElementById('writeValueField');
+
+      if (type === 'bitfield16') {
+        bitfieldUI.style.display = 'block';
+        valueField.style.display = 'none';
+        updateBitfieldValue(); // Update display
+      } else {
+        bitfieldUI.style.display = 'none';
+        valueField.style.display = 'block';
+      }
+    }
+
+    function updateBitfieldValue() {
+      let value = 0;
+      for (let i = 0; i < 16; i++) {
+        const checkbox = document.getElementById('bit' + i);
+        if (checkbox && checkbox.checked) {
+          value |= (1 << i);
+        }
+      }
+
+      document.getElementById('bitfieldValueDisplay').textContent = value;
+      document.getElementById('bitfieldValueHex').textContent = value.toString(16).toUpperCase().padStart(4, '0');
+
+      // Also update the hidden value field for form submission
+      document.getElementById('writeValue').value = value;
+    }
+
+    function clearAllBits() {
+      for (let i = 0; i < 16; i++) {
+        const checkbox = document.getElementById('bit' + i);
+        if (checkbox) {
+          checkbox.checked = false;
+        }
+      }
+      updateBitfieldValue();
+    }
+
+    function setAllBits() {
+      for (let i = 0; i < 16; i++) {
+        const checkbox = document.getElementById('bit' + i);
+        if (checkbox) {
+          checkbox.checked = true;
+        }
+      }
+      updateBitfieldValue();
+    }
   </script>
 </body>
 </html>
