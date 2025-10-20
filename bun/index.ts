@@ -1189,6 +1189,7 @@ const server = Bun.serve({
     <button class="button warning" onclick="writeCustomRegister()">Write Register</button>
     <button class="button" onclick="loadWritePreset('WORK_MODE')">Load Work Mode Example</button>
     <button class="button" onclick="loadWritePreset('MIN_SOC')">Load Min SoC Example</button>
+    <button class="button" onclick="loadWritePreset('REMOTE_CONTROL')">Load Remote Control (Bitfield) Example</button>
     <div id="customWriteResult" class="result"></div>
 
     <hr style="margin: 30px 0; border: none; border-top: 2px solid #ddd;">
@@ -1395,6 +1396,7 @@ const server = Bun.serve({
         'WORK_MODE': { address: 49203, length: 1, type: 'u16', scale: '', value: 1 },
         'MIN_SOC': { address: 46609, length: 1, type: 'u16', scale: '', value: 20 },
         'MAX_CHARGE_CURRENT': { address: 46607, length: 1, type: 'i16', scale: 10, value: 20 },
+        'REMOTE_CONTROL': { address: 46001, length: 1, type: 'bitfield16', scale: '', value: 0, bits: [0, 1] },
       };
 
       const p = presets[preset];
@@ -1404,6 +1406,28 @@ const server = Bun.serve({
         document.getElementById('writeType').value = p.type;
         document.getElementById('writeScale').value = p.scale;
         document.getElementById('writeValue').value = p.value;
+
+        // Toggle UI to show/hide bitfield controls
+        toggleBitfieldUI();
+
+        // If bitfield type, set example bits
+        if (p.type === 'bitfield16' && p.bits) {
+          // Clear all bits first
+          for (let i = 0; i < 16; i++) {
+            const checkbox = document.getElementById('bit' + i);
+            if (checkbox) {
+              checkbox.checked = false;
+            }
+          }
+          // Set the example bits
+          p.bits.forEach(bitNum => {
+            const checkbox = document.getElementById('bit' + bitNum);
+            if (checkbox) {
+              checkbox.checked = true;
+            }
+          });
+          updateBitfieldValue();
+        }
       }
     }
 
