@@ -911,6 +911,82 @@ const server = Bun.serve({
         );
       }
 
+      // Remote Control - Read all registers
+      if (url.pathname === '/api/remote-control' && req.method === 'GET') {
+        const client = await ensureConnection();
+
+        const remoteControl = await client.readRegister(WritableRegisters.REMOTE_CONTROL);
+        const remoteTimeout = await client.readRegister(WritableRegisters.REMOTE_TIMEOUT_SET);
+        const remoteActivePower = await client.readRegister(WritableRegisters.REMOTE_ACTIVE_POWER);
+        const remoteReactivePower = await client.readRegister(WritableRegisters.REMOTE_REACTIVE_POWER);
+
+        return Response.json(
+          {
+            success: true,
+            remoteControl,
+            remoteTimeout,
+            remoteActivePower,
+            remoteReactivePower,
+          },
+          { headers: corsHeaders },
+        );
+      }
+
+      // Remote Control - Write all registers
+      if (url.pathname === '/api/remote-control' && req.method === 'POST') {
+        const body = await req.json();
+        const { remoteControl, remoteTimeout, remoteActivePower, remoteReactivePower } = body;
+
+        const client = await ensureConnection();
+
+        let allSuccess = true;
+        const results: any = {};
+
+        // Write Remote Control bitfield
+        if (remoteControl !== undefined) {
+          results.remoteControl = await client.writeRegister(
+            WritableRegisters.REMOTE_CONTROL,
+            remoteControl,
+          );
+          allSuccess = allSuccess && results.remoteControl;
+        }
+
+        // Write Remote Timeout
+        if (remoteTimeout !== undefined) {
+          results.remoteTimeout = await client.writeRegister(
+            WritableRegisters.REMOTE_TIMEOUT_SET,
+            remoteTimeout,
+          );
+          allSuccess = allSuccess && results.remoteTimeout;
+        }
+
+        // Write Remote Active Power
+        if (remoteActivePower !== undefined) {
+          results.remoteActivePower = await client.writeRegister(
+            WritableRegisters.REMOTE_ACTIVE_POWER,
+            remoteActivePower,
+          );
+          allSuccess = allSuccess && results.remoteActivePower;
+        }
+
+        // Write Remote Reactive Power
+        if (remoteReactivePower !== undefined) {
+          results.remoteReactivePower = await client.writeRegister(
+            WritableRegisters.REMOTE_REACTIVE_POWER,
+            remoteReactivePower,
+          );
+          allSuccess = allSuccess && results.remoteReactivePower;
+        }
+
+        return Response.json(
+          {
+            success: allSuccess,
+            details: results,
+          },
+          { headers: corsHeaders },
+        );
+      }
+
       // Custom register write endpoint
       if (url.pathname === '/api/custom/write' && req.method === 'POST') {
         const body = await req.json();
@@ -1027,8 +1103,8 @@ const server = Bun.serve({
   <div class="section">
     <h2>Power Limits (Registers 46501, 46504)</h2>
     <p>Import/Export power limits in Watts</p>
-    Import Limit: <input type="number" id="importLimit" value="5000" min="0">W
-    Export Limit: <input type="number" id="exportLimit" value="5000" min="0">W
+    Import Limit: <input type="number" id="importLimit" value="500" min="0">W
+    Export Limit: <input type="number" id="exportLimit" value="500" min="0">W
     <button class="button" onclick="setPowerLimits()">Set Power Limits</button>
     <div id="powerLimitsResult" class="result"></div>
   </div>
@@ -1039,6 +1115,56 @@ const server = Bun.serve({
     Power: <input type="number" id="remotePower" value="0">W
     <button class="button" onclick="setRemotePower()">Set Remote Power</button>
     <div id="remotePowerResult" class="result"></div>
+  </div>
+
+  <div class="section" style="background: #e3f2fd; border: 2px solid #2196F3;">
+    <h2>🎛️ Remote Control - Alle Register (46001-46005)</h2>
+    <p>Verwalte alle Remote Control Register zusammen</p>
+
+    <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+      <button class="button info" onclick="readRemoteControl()">🔄 Alle Auslesen</button>
+      <button class="button" onclick="writeRemoteControl()">✅ Alle Setzen</button>
+    </div>
+
+    <div class="grid">
+      <div class="field">
+        <label>Remote Control (46001) - Bitfeld:</label>
+        <input type="number" id="rc_control" value="0" min="0" max="65535">
+        <small style="color: #666;">Bit 0: Enable (0=Disable, 1=Enable)<br>
+        Bit 1: Direction (0=Generation, 1=Consumption)<br>
+        Bits 3-2: Target (00=AC, 01=Battery, 10=Grid)</small>
+      </div>
+
+      <div class="field">
+        <label>Remote Timeout Set (46002) - U16:</label>
+        <input type="number" id="rc_timeout" value="60" min="0" max="65535">
+        <small style="color: #666;">Timeout in Sekunden</small>
+      </div>
+
+      <div class="field">
+        <label>Remote Active Power (46003) - I32:</label>
+        <input type="number" id="rc_active_power" value="0" step="1">
+        <small style="color: #666;">Wirkleistung in Watt</small>
+      </div>
+
+      <div class="field">
+        <label>Remote Reactive Power (46005) - I32:</label>
+        <input type="number" id="rc_reactive_power" value="0" step="1">
+        <small style="color: #666;">Blindleistung in Var</small>
+      </div>
+    </div>
+
+    <div id="remoteControlResult" class="result"></div>
+
+    <div style="margin-top: 15px; padding: 10px; background: #fff3cd; border-radius: 4px;">
+      <strong>Schnelleinstellungen:</strong>
+      <div style="margin-top: 10px;">
+        <button class="button" onclick="setRemoteControlPreset('charge', 300)">Laden (300W)</button>
+        <button class="button" onclick="setRemoteControlPreset('charge', 500)">Laden (500W)</button>
+        <button class="button danger" onclick="setRemoteControlPreset('discharge', 300)">Entladen (300W)</button>
+        <button class="button danger" onclick="setRemoteControlPreset('disable', 0)">Deaktivieren</button>
+      </div>
+    </div>
   </div>
 
   <div class="section custom">
@@ -1536,6 +1662,111 @@ const server = Bun.serve({
         }
       }
       updateBitfieldValue();
+    }
+
+    // Remote Control Functions
+    async function readRemoteControl() {
+      const resultDiv = document.getElementById('remoteControlResult');
+      resultDiv.className = 'result';
+      resultDiv.innerHTML = '<em>Lese alle Register aus...</em>';
+
+      try {
+        const res = await fetch('/api/remote-control');
+        const data = await res.json();
+
+        if (data.success) {
+          // Update input fields with read values
+          document.getElementById('rc_control').value = data.remoteControl || 0;
+          document.getElementById('rc_timeout').value = data.remoteTimeout || 0;
+          document.getElementById('rc_active_power').value = data.remoteActivePower || 0;
+          document.getElementById('rc_reactive_power').value = data.remoteReactivePower || 0;
+
+          resultDiv.className = 'result success';
+          resultDiv.innerHTML =
+            '<strong>✅ Erfolgreich ausgelesen</strong><pre>' +
+            JSON.stringify(data, null, 2) +
+            '</pre>';
+        } else {
+          resultDiv.className = 'result error';
+          resultDiv.innerHTML = '<strong>❌ Fehler beim Auslesen</strong>';
+        }
+      } catch (error) {
+        resultDiv.className = 'result error';
+        resultDiv.innerHTML = '<strong>❌ Fehler:</strong> ' + error.message;
+      }
+    }
+
+    async function writeRemoteControl() {
+      const remoteControl = parseInt(document.getElementById('rc_control').value);
+      const remoteTimeout = parseInt(document.getElementById('rc_timeout').value);
+      const remoteActivePower = parseInt(document.getElementById('rc_active_power').value);
+      const remoteReactivePower = parseInt(document.getElementById('rc_reactive_power').value);
+
+      if (!confirm(\`Remote Control Register setzen?\\n\\nRemote Control: \${remoteControl}\\nTimeout: \${remoteTimeout}s\\nActive Power: \${remoteActivePower}W\\nReactive Power: \${remoteReactivePower}Var\`)) {
+        return;
+      }
+
+      const resultDiv = document.getElementById('remoteControlResult');
+      resultDiv.className = 'result';
+      resultDiv.innerHTML = '<em>Schreibe alle Register...</em>';
+
+      try {
+        const res = await fetch('/api/remote-control', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            remoteControl,
+            remoteTimeout,
+            remoteActivePower,
+            remoteReactivePower
+          })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          resultDiv.className = 'result success';
+          resultDiv.innerHTML =
+            '<strong>✅ Alle Register erfolgreich gesetzt</strong><pre>' +
+            JSON.stringify(data.details, null, 2) +
+            '</pre>';
+        } else {
+          resultDiv.className = 'result error';
+          resultDiv.innerHTML =
+            '<strong>⚠️ Teilweise erfolgreich</strong><pre>' +
+            JSON.stringify(data.details, null, 2) +
+            '</pre>';
+        }
+      } catch (error) {
+        resultDiv.className = 'result error';
+        resultDiv.innerHTML = '<strong>❌ Fehler:</strong> ' + error.message;
+      }
+    }
+
+    async function setRemoteControlPreset(mode, power) {
+      let remoteControl = 0;
+      let activePower = 0;
+
+      if (mode === 'charge') {
+        // Enable (Bit 0) + Consumption direction (Bit 1) + Battery target (Bits 3:2 = 01)
+        remoteControl = 0b00000011; // Binary: Bit 0 and 1 set = 3
+        activePower = power;
+      } else if (mode === 'discharge') {
+        // Enable (Bit 0) + Generation direction (Bit 1 = 0) + Battery target (Bits 3:2 = 01)
+        remoteControl = 0b00000101; // Binary: Bit 0 and 2 set = 5
+        activePower = -power;
+      } else if (mode === 'disable') {
+        remoteControl = 0;
+        activePower = 0;
+      }
+
+      // Update fields
+      document.getElementById('rc_control').value = remoteControl;
+      document.getElementById('rc_timeout').value = 60;
+      document.getElementById('rc_active_power').value = activePower;
+      document.getElementById('rc_reactive_power').value = 0;
+
+      // Auto-write
+      await writeRemoteControl();
     }
   </script>
 </body>
